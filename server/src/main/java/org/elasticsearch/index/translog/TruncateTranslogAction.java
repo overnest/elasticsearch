@@ -217,7 +217,7 @@ public class TruncateTranslogAction {
      * Write a translog containing the given translog UUID to the given location. Returns the number of bytes written.
      */
     private static int writeEmptyTranslog(Path filename, String translogUUID) throws IOException {
-        try (FileChannel fc = FileChannel.open(filename, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW)) {
+        try (FileChannel fc = EncryptedFileChannel.open(filename, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW)) {
             TranslogHeader header = new TranslogHeader(translogUUID, SequenceNumbers.UNASSIGNED_PRIMARY_TERM);
             header.write(fc);
             return header.sizeInBytes();

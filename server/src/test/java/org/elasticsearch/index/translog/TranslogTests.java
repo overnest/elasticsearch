@@ -116,6 +116,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.LongConsumer;
 import java.util.function.LongSupplier;
 import java.util.stream.Collectors;
@@ -2388,8 +2389,8 @@ public class TranslogTests extends ESTestCase {
                                          final boolean throwUnknownException, String translogUUID,
                                          final TranslogDeletionPolicy deletionPolicy,
                                          final List<FileChannel> fileChannels) throws IOException {
-        final ChannelFactory channelFactory = (file, openOption) -> {
-            FileChannel channel = FileChannel.open(file, openOption);
+        final Function<Boolean, ChannelFactory> getChannelFactory = (encrypted) -> (file, openOption) -> {
+            FileChannel channel = encrypted ? EncryptedFileChannel.open(file, openOption) : FileChannel.open(file, openOption);
             if (fileChannels != null) {
                 fileChannels.add(channel);
             }
@@ -2407,15 +2408,21 @@ public class TranslogTests extends ESTestCase {
                 }
             }
         };
+        final ChannelFactory checkpointChannelFactory = getChannelFactory.apply(false);
+        final ChannelFactory translogChannelFactory = getChannelFactory.apply(true);
         if (translogUUID == null) {
             translogUUID = Translog.createEmptyTranslog(
-                config.getTranslogPath(), SequenceNumbers.NO_OPS_PERFORMED, shardId, channelFactory, primaryTerm.get());
+                config.getTranslogPath(), SequenceNumbers.NO_OPS_PERFORMED, shardId, checkpointChannelFactory, translogChannelFactory, primaryTerm.get());
         }
         return new Translog(config, translogUUID, deletionPolicy, () -> SequenceNumbers.NO_OPS_PERFORMED, primaryTerm::get,
             seqNo -> {}) {
             @Override
             ChannelFactory getChannelFactory() {
-                return channelFactory;
+                return checkpointChannelFactory;
+            }
+            @Override
+            ChannelFactory getEncryptedChannelFactory() {
+                return translogChannelFactory;
             }
 
             @Override

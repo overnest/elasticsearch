@@ -49,7 +49,8 @@ import java.util.function.LongSupplier;
 
 public class TranslogWriter extends BaseTranslogReader implements Closeable {
     private final ShardId shardId;
-    private final ChannelFactory channelFactory;
+    private final ChannelFactory checkpointChannelFactory;
+    private final ChannelFactory translogChannelFactory;
     // the last checkpoint that was written when the translog was last synced
     private volatile Checkpoint lastSyncedCheckpoint;
     /* the number of translog operations written to this file */
@@ -79,7 +80,8 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
     private final Map<Long, Tuple<BytesReference, Exception>> seenSequenceNumbers;
 
     private TranslogWriter(
-        final ChannelFactory channelFactory,
+        final ChannelFactory checkpointChannelFactory,
+        final ChannelFactory translogChannelFactory,
         final ShardId shardId,
         final Checkpoint initialCheckpoint,
         final FileChannel channel,
@@ -95,7 +97,8 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
             "initial checkpoint offset [" + initialCheckpoint.offset + "] is different than current channel position ["
                 + channel.position() + "]";
         this.shardId = shardId;
-        this.channelFactory = channelFactory;
+        this.checkpointChannelFactory = checkpointChannelFactory;
+        this.translogChannelFactory = translogChannelFactory;
         this.minTranslogGenerationSupplier = minTranslogGenerationSupplier;
         this.outputStream = new BufferedChannelOutputStream(java.nio.channels.Channels.newOutputStream(channel), bufferSize.bytesAsInt());
         this.lastSyncedCheckpoint = initialCheckpoint;
@@ -112,18 +115,18 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
         this.tragedy = tragedy;
     }
 
-    public static TranslogWriter create(ShardId shardId, String translogUUID, long fileGeneration, Path file, ChannelFactory channelFactory,
-                                        ByteSizeValue bufferSize, final long initialMinTranslogGen, long initialGlobalCheckpoint,
+    public static TranslogWriter create(ShardId shardId, String translogUUID, long fileGeneration, Path file, ChannelFactory checkpointChannelFactory,
+                                        ChannelFactory translogChannelFactory, ByteSizeValue bufferSize, final long initialMinTranslogGen, long initialGlobalCheckpoint,
                                         final LongSupplier globalCheckpointSupplier, final LongSupplier minTranslogGenerationSupplier,
                                         final long primaryTerm, TragicExceptionHolder tragedy, LongConsumer persistedSequenceNumberConsumer)
         throws IOException {
-        final FileChannel channel = channelFactory.open(file);
+        final FileChannel channel = translogChannelFactory.open(file);
         try {
             final TranslogHeader header = new TranslogHeader(translogUUID, primaryTerm);
             header.write(channel);
             final Checkpoint checkpoint = Checkpoint.emptyTranslogCheckpoint(header.sizeInBytes(), fileGeneration,
                 initialGlobalCheckpoint, initialMinTranslogGen);
-            writeCheckpoint(channelFactory, file.getParent(), checkpoint);
+            writeCheckpoint(checkpointChannelFactory, file.getParent(), checkpoint);
             final LongSupplier writerGlobalCheckpointSupplier;
             if (Assertions.ENABLED) {
                 writerGlobalCheckpointSupplier = () -> {
@@ -135,7 +138,7 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
             } else {
                 writerGlobalCheckpointSupplier = globalCheckpointSupplier;
             }
-            return new TranslogWriter(channelFactory, shardId, checkpoint, channel, file, bufferSize,
+            return new TranslogWriter(checkpointChannelFactory, translogChannelFactory, shardId, checkpoint, channel, file, bufferSize,
                 writerGlobalCheckpointSupplier, minTranslogGenerationSupplier, header, tragedy, persistedSequenceNumberConsumer);
         } catch (Exception exception) {
             // if we fail to bake the file-generation into the checkpoint we stick with the file and once we recover and that
@@ -374,7 +377,7 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
                     // we can continue writing to the buffer etc.
                     try {
                         channel.force(false);
-                        writeCheckpoint(channelFactory, path.getParent(), checkpointToSync);
+                        writeCheckpoint(checkpointChannelFactory, path.getParent(), checkpointToSync);
                     } catch (final Exception ex) {
                         closeWithTragicEvent(ex);
                         throw ex;
@@ -414,10 +417,10 @@ public class TranslogWriter extends BaseTranslogReader implements Closeable {
     }
 
     private static void writeCheckpoint(
-            final ChannelFactory channelFactory,
+            final ChannelFactory checkpointChannelFactory,
             final Path translogFile,
             final Checkpoint checkpoint) throws IOException {
-        Checkpoint.write(channelFactory, translogFile.resolve(Translog.CHECKPOINT_FILE_NAME), checkpoint, StandardOpenOption.WRITE);
+        Checkpoint.write(checkpointChannelFactory, translogFile.resolve(Translog.CHECKPOINT_FILE_NAME), checkpoint, StandardOpenOption.WRITE);
     }
 
     /**
