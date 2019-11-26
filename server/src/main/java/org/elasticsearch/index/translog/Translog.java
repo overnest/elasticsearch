@@ -305,7 +305,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
     }
 
     TranslogReader openReader(Path path, Checkpoint checkpoint) throws IOException {
-        FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
+        FileChannel channel = EncryptedFileChannel.open(path, StandardOpenOption.READ);
         try {
             assert Translog.parseIdFromFileName(path) == checkpoint.generation : "expected generation: " +
                 Translog.parseIdFromFileName(path) + " but got: " + checkpoint.generation;
@@ -513,6 +513,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
                 fileGeneration,
                 location.resolve(getFilename(fileGeneration)),
                 getChannelFactory(),
+                getEncryptedChannelFactory(),
                 config.getBufferSize(),
                 initialMinTranslogGen, initialGlobalCheckpoint,
                 globalCheckpointSupplier, this::getMinFileGeneration, primaryTermSupplier.getAsLong(), tragedy,
@@ -1788,6 +1789,10 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         }
     }
 
+    ChannelFactory getEncryptedChannelFactory() {
+        return EncryptedFileChannel::open;
+    }
+
     ChannelFactory getChannelFactory() {
         return FileChannel::open;
     }
@@ -1824,7 +1829,7 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
         final Checkpoint checkpoint = readCheckpoint(location);
         // We need to open at least one translog header to validate the translogUUID.
         final Path translogFile = location.resolve(getFilename(checkpoint.generation));
-        try (FileChannel channel = FileChannel.open(translogFile, StandardOpenOption.READ)) {
+        try (FileChannel channel = EncryptedFileChannel.open(translogFile, StandardOpenOption.READ)) {
             TranslogHeader.read(expectedTranslogUUID, translogFile, channel);
         } catch (TranslogCorruptedException ex) {
             throw ex; // just bubble up.
@@ -1879,22 +1884,23 @@ public class Translog extends AbstractIndexShardComponent implements IndexShardC
 
     public static String createEmptyTranslog(final Path location, final long initialGlobalCheckpoint,
                                              final ShardId shardId, final long primaryTerm) throws IOException {
-        final ChannelFactory channelFactory = FileChannel::open;
-        return createEmptyTranslog(location, initialGlobalCheckpoint, shardId, channelFactory, primaryTerm);
+        final ChannelFactory translogChannelFactory = EncryptedFileChannel::open;
+        final ChannelFactory checkpointChannelFactory = FileChannel::open;
+        return createEmptyTranslog(location, initialGlobalCheckpoint, shardId, checkpointChannelFactory, translogChannelFactory, primaryTerm);
     }
 
     static String createEmptyTranslog(Path location, long initialGlobalCheckpoint, ShardId shardId,
-                                      ChannelFactory channelFactory, long primaryTerm) throws IOException {
+                                      ChannelFactory checkpointChannelFactory, ChannelFactory translogChannelFactory, long primaryTerm) throws IOException {
         IOUtils.rm(location);
         Files.createDirectories(location);
         final Checkpoint checkpoint =
             Checkpoint.emptyTranslogCheckpoint(0, 1, initialGlobalCheckpoint, 1);
         final Path checkpointFile = location.resolve(CHECKPOINT_FILE_NAME);
-        Checkpoint.write(channelFactory, checkpointFile, checkpoint, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
+        Checkpoint.write(checkpointChannelFactory, checkpointFile, checkpoint, StandardOpenOption.WRITE, StandardOpenOption.CREATE_NEW);
         IOUtils.fsync(checkpointFile, false);
         final String translogUUID = UUIDs.randomBase64UUID();
         TranslogWriter writer = TranslogWriter.create(shardId, translogUUID, 1,
-            location.resolve(getFilename(1)), channelFactory,
+            location.resolve(getFilename(1)), checkpointChannelFactory, translogChannelFactory,
             new ByteSizeValue(10), 1, initialGlobalCheckpoint,
             () -> { throw new UnsupportedOperationException(); }, () -> { throw new UnsupportedOperationException(); }, primaryTerm,
                 new TragicExceptionHolder(), seqNo -> { throw new UnsupportedOperationException(); });
