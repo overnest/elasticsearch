@@ -23,6 +23,7 @@ import org.apache.lucene.codecs.CodecUtil;
 import org.apache.lucene.store.IOContext;
 import org.apache.lucene.store.IndexOutput;
 import org.apache.lucene.store.SimpleFSDirectory;
+import org.apache.lucene.util.crypto.Crypto;
 import org.elasticsearch.common.Randomness;
 import org.elasticsearch.core.internal.io.IOUtils;
 import org.elasticsearch.env.Environment;
@@ -436,6 +437,9 @@ public class KeyStoreWrapperTests extends ESTestCase {
     }
 
     public void testLegacyV3() throws GeneralSecurityException, IOException {
+        // test compares with hardcoded unencrypted resource
+        Crypto.setEncryptionOn(false);
+
         final Path configDir = createTempDir();
         final Path keystore = configDir.resolve("elasticsearch.keystore");
         try (InputStream is = KeyStoreWrapperTests.class.getResourceAsStream("/format-v3-elasticsearch.keystore");

@@ -196,7 +196,7 @@ final class Checkpoint {
         };
         final String resourceDesc = "checkpoint(path=\"" + checkpointFile + "\", gen=" + checkpoint + ")";
         try (OutputStreamIndexOutput indexOutput =
-                 new OutputStreamIndexOutput(resourceDesc, checkpointFile.toString(), byteOutputStream, V3_FILE_SIZE)) {
+                 new OutputStreamIndexOutput(resourceDesc, checkpointFile.toString(), byteOutputStream, V3_FILE_SIZE, true)) {
             CodecUtil.writeHeader(indexOutput, CHECKPOINT_CODEC, CURRENT_VERSION);
             checkpoint.write(indexOutput);
             CodecUtil.writeFooter(indexOutput);
