@@ -18,6 +18,7 @@
  */
 package org.elasticsearch.env;
 
+import org.apache.lucene.util.crypto.Crypto;
 import org.elasticsearch.Version;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.gateway.MetaDataStateFormat;
@@ -66,6 +67,9 @@ public class NodeMetaDataTests extends ESTestCase {
         assertTrue(Version.CURRENT.minimumIndexCompatibilityVersion().onOrBefore(Version.V_7_0_0));
         // when the current version is incompatible with version 7, the behaviour should change to reject files like the given resource
         // which do not have the version field
+
+        // test compares with hardcoded unencrypted resource
+        Crypto.setEncryptionOn(false);
 
         final Path tempDir = createTempDir();
         final Path stateDir = Files.createDirectory(tempDir.resolve(MetaDataStateFormat.STATE_DIR_NAME));

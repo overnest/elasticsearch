@@ -157,4 +157,8 @@ grant {
   permission java.io.FilePermission "/sys/fs/cgroup/memory", "read";
   permission java.io.FilePermission "/sys/fs/cgroup/memory/-", "read";
 
+  // encrypted lucene
+  permission java.security.SecurityPermission "setProperty.crypto.policy";
+  permission java.lang.RuntimePermission "accessClassInPackage.sun.nio.ch";
+  permission java.util.PropertyPermission "crypto.encryption.on", "write";
 };

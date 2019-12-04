@@ -27,6 +27,7 @@ import org.apache.lucene.store.IndexInput;
 import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.store.SimpleFSDirectory;
 import org.apache.lucene.util.LuceneTestCase;
+import org.apache.lucene.util.crypto.Crypto;
 import org.elasticsearch.ElasticsearchException;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.Version;
@@ -71,6 +72,9 @@ public class MetaDataStateFormatTests extends ESTestCase {
      * Ensure we can read a pre-generated cluster state.
      */
     public void testReadClusterState() throws IOException {
+        // test compares with hardcoded unencrypted resource
+        Crypto.setEncryptionOn(false);
+
         final MetaDataStateFormat<MetaData> format = new MetaDataStateFormat<MetaData>("global-") {
 
             @Override
