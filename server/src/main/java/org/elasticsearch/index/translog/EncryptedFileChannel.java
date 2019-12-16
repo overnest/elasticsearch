@@ -1,6 +1,10 @@
 package org.elasticsearch.index.translog;
 
-import java.io.*;
+import org.apache.lucene.util.crypto.Crypto;
+import org.apache.lucene.util.crypto.CtrCipher;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
@@ -21,7 +25,7 @@ public class EncryptedFileChannel extends FileChannel {
 
     private EncryptedFileChannel(Path path, OpenOption... options) throws IOException {
         try {
-            this.cipher = new CtrCipher();
+            this.cipher = Crypto.getCtrCipher(Crypto.getAesKey(), Crypto.getAesIV());
             this.channel = FileChannel.open(path, options);
         }catch(FileNotFoundException ex) {
             throw new IOException(ex);

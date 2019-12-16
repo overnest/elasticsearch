@@ -459,6 +459,8 @@ public class KeyStoreWrapperTests extends ESTestCase {
         assertThat(toByteArray(wrapper.getFile("string_setting")), equalTo("string_value".getBytes(StandardCharsets.UTF_8)));
         assertThat(wrapper.getString("file_setting"), equalTo("file_value"));
         assertThat(toByteArray(wrapper.getFile("file_setting")), equalTo("file_value".getBytes(StandardCharsets.UTF_8)));
+
+        Crypto.setEncryptionOn(true);
     }
 
     private byte[] toByteArray(final InputStream is) throws IOException {

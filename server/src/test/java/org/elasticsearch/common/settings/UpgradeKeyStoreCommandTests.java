@@ -19,6 +19,7 @@
 
 package org.elasticsearch.common.settings;
 
+import org.apache.lucene.util.crypto.Crypto;
 import org.elasticsearch.cli.Command;
 import org.elasticsearch.cli.UserException;
 import org.elasticsearch.env.Environment;
@@ -49,6 +50,10 @@ public class UpgradeKeyStoreCommandTests extends KeyStoreCommandTestCase {
     }
 
     public void testKeystoreUpgrade() throws Exception {
+        // test compares with hardcoded unencrypted resource
+        Crypto.setEncryptionOn(false);
+        // TODO Consider not letting lucene encrypt keystores, this is an unintended side effect 
+
         final Path keystore = KeyStoreWrapper.keystorePath(env.configFile());
         try (InputStream is = KeyStoreWrapperTests.class.getResourceAsStream("/format-v3-elasticsearch.keystore");
              OutputStream os = Files.newOutputStream(keystore)) {
@@ -69,6 +74,8 @@ public class UpgradeKeyStoreCommandTests extends KeyStoreCommandTestCase {
             afterUpgrade.decrypt(new char[0]);
             assertThat(afterUpgrade.getSettingNames(), hasItem(KeyStoreWrapper.SEED_SETTING.getKey()));
         }
+
+        Crypto.setEncryptionOn(true);
     }
 
     public void testKeystoreDoesNotExist() {

@@ -79,6 +79,8 @@ public class NodeMetaDataTests extends ESTestCase {
         final NodeMetaData nodeMetaData = NodeMetaData.FORMAT.loadLatestState(logger, xContentRegistry(), tempDir);
         assertThat(nodeMetaData.nodeId(), equalTo("y6VUVMSaStO4Tz-B5BxcOw"));
         assertThat(nodeMetaData.nodeVersion(), equalTo(Version.V_EMPTY));
+
+        Crypto.setEncryptionOn(true);
     }
 
     public void testUpgradesLegitimateVersions() {
