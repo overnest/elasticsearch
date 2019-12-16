@@ -96,6 +96,8 @@ public class MetaDataStateFormatTests extends ESTestCase {
         assertThat(read, notNullValue());
         assertThat(read.clusterUUID(), equalTo("y9XcwLJGTROoOEfixlRwfQ"));
         // indices are empty since they are serialized separately
+
+        Crypto.setEncryptionOn(true);
     }
 
     public void testReadWriteState() throws IOException {
