@@ -35,6 +35,7 @@ import org.apache.lucene.store.MockDirectoryWrapper;
 import org.apache.lucene.util.LineFileDocs;
 import org.apache.lucene.util.LuceneTestCase;
 import org.apache.lucene.util.crypto.Crypto;
+import org.apache.lucene.util.crypto.EncryptedFileChannel;
 import org.elasticsearch.Assertions;
 import org.elasticsearch.Version;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
@@ -2804,8 +2805,6 @@ public class TranslogTests extends ESTestCase {
 
     public void testLegacyCheckpointVersion() throws IOException {
         // test compares with hardcoded unencrypted resource
-        Crypto.setEncryptionOn(false);
-
         expectThrows(
             TranslogCorruptedException.class,
             IndexFormatTooOldException.class,
@@ -2815,8 +2814,6 @@ public class TranslogTests extends ESTestCase {
             equalTo(new Checkpoint(-1312746831014894010L, 44230819, 4168771208509507653L, 6217263213205155568L,
                 8590850694628654668L, 3768575734506660560L, 1476009383806516272L,
                 SequenceNumbers.UNASSIGNED_SEQ_NO)));
-
-        Crypto.setEncryptionOn(true);
     }
 
     /**

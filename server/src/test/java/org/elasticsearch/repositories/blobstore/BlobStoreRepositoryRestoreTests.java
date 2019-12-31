@@ -21,6 +21,7 @@ package org.elasticsearch.repositories.blobstore;
 
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.util.TestUtil;
+import org.apache.lucene.util.crypto.EncryptedFileChannel;
 import org.elasticsearch.cluster.metadata.RepositoryMetaData;
 import org.elasticsearch.cluster.routing.RecoverySource;
 import org.elasticsearch.cluster.routing.ShardRouting;
@@ -126,7 +127,8 @@ public class BlobStoreRepositoryRestoreTests extends IndexShardTestCase {
             for (StoreFileMetaData storeFile : storeFiles) {
                 String fileName = storeFile.name();
                 assertTrue("File [" + fileName + "] does not exist in store directory", directoryFiles.contains(fileName));
-                assertEquals(storeFile.length(), shard.store().directory().fileLength(fileName));
+                long expectedLength = storeFile.length() + (shard.store().directory().usesEncryption() ? EncryptedFileChannel.IV_LENGTH : 0);
+                assertEquals(expectedLength, shard.store().directory().fileLength(fileName));
             }
         } finally {
             if (shard != null && shard.state() != IndexShardState.CLOSED) {

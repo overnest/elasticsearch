@@ -20,11 +20,12 @@
 package org.elasticsearch.index.translog;
 
 import org.apache.lucene.store.ByteArrayDataOutput;
-import org.elasticsearch.core.internal.io.IOUtils;
+import org.apache.lucene.util.crypto.EncryptedFileChannel;
 import org.elasticsearch.common.UUIDs;
 import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.common.collect.Tuple;
 import org.elasticsearch.common.lease.Releasable;
+import org.elasticsearch.core.internal.io.IOUtils;
 import org.elasticsearch.index.shard.ShardId;
 import org.elasticsearch.test.ESTestCase;
 import org.mockito.Mockito;
