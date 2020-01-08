@@ -216,6 +216,7 @@ public class KeyStoreWrapper implements SecureSettings {
         }
 
         SimpleFSDirectory directory = new SimpleFSDirectory(configDir);
+        directory.setUseEncryption(false); // Don't encrypt keystores
         try (IndexInput indexInput = directory.openInput(KEYSTORE_FILENAME, IOContext.READONCE)) {
             ChecksumIndexInput input = new BufferedChecksumIndexInput(indexInput);
             final int formatVersion;
@@ -479,6 +480,7 @@ public class KeyStoreWrapper implements SecureSettings {
         ensureOpen();
 
         SimpleFSDirectory directory = new SimpleFSDirectory(configDir);
+        directory.setUseEncryption(false); // Don't encrypt keystores
         // write to tmp file first, then overwrite
         String tmpFile = KEYSTORE_FILENAME + ".tmp";
         try (IndexOutput output = directory.createOutput(tmpFile, IOContext.DEFAULT)) {
