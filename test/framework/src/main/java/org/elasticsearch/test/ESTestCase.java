@@ -29,6 +29,7 @@ import com.carrotsearch.randomizedtesting.generators.RandomNumbers;
 import com.carrotsearch.randomizedtesting.generators.RandomPicks;
 import com.carrotsearch.randomizedtesting.generators.RandomStrings;
 import com.carrotsearch.randomizedtesting.rules.TestRuleAdapter;
+
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -46,6 +47,8 @@ import org.apache.lucene.util.LuceneTestCase.SuppressCodecs;
 import org.apache.lucene.util.TestRuleMarkFailure;
 import org.apache.lucene.util.TestUtil;
 import org.apache.lucene.util.TimeUnits;
+import org.apache.lucene.util.crypto.Crypto;
+import org.apache.lucene.util.crypto.MockKeyProvider;
 import org.elasticsearch.Version;
 import org.elasticsearch.bootstrap.BootstrapForTesting;
 import org.elasticsearch.bootstrap.JavaVersion;
@@ -334,6 +337,19 @@ public abstract class ESTestCase extends LuceneTestCase {
             Locale.setDefault(Locale.ENGLISH);
         }
     }
+    
+    // setup mock crypto keys for this test run.
+
+    @BeforeClass
+    public static void setCryptoTesting() throws Exception {
+        Crypto.setCustomKeyProvider(new MockKeyProvider());
+    }
+
+    @AfterClass
+    public static void restoreCryptoTesting() throws Exception {
+        Crypto.setCustomKeyProvider(null);
+    }
+
 
     @Before
     public final void before()  {
